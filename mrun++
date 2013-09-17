@@ -1,0 +1,10 @@
+#!/bin/sh
+
+if [ $# == 0 ]; then
+  echo "$0: wrong number of arguments proviede"
+fi
+clang++ $1
+if [ -x ./a.out ]; then
+  ./a.out
+  rm ./a.out
+fi
