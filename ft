@@ -1,0 +1,3 @@
+#!/bin/sh
+
+MOZ_HOST_BIN=`echo ~`/Repos/mozilla-central/objdir-fx-debug/dist/bin TEST_PATH="$1" make -C `echo ~`/Repos/mozilla-central/objdir-droid/ mochitest-remote
