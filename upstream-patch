@@ -1,0 +1,27 @@
+#! /bin/sh
+
+version=$1
+if [[ ! $version ]]; then
+  echo no version
+  exit 1
+fi
+
+patch_name=`date "+%F-%T"`.patch
+
+git format-patch HEAD...HEAD~ --stdout > ~/patches/$patch_name
+
+./scripts/checkpatch.pl \
+  ~/patches/$patch_name
+
+git send-email \
+  --to 'Mina Almasry <almasrymina@google.com>' \
+  ~/patches/$patch_name \
+  --validate \
+  --annotate \
+
+
+:<<'END'
+  --to 'Greg Thelen <gthelen@google.com>' \
+  --to 'Shakeel B <shakeelb@google.com>' \
+  --cc-cmd="./scripts/get_maintainer.pl" \
+END
