@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -ex
+
+diff <(git show $1) <(git show $2) | less

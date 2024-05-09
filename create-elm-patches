@@ -1,0 +1,23 @@
+#!/bin/sh
+
+#
+# Workflow:
+# - Prepare branch
+# - ~/bin/create-elm-patches
+
+set -ex
+
+rm -rf ~/elm-patches/*;
+
+files=$(git format-patch v5.15.120 -o ~/elm-patches/)
+
+
+for file in $files; do
+	sed '/Change-Id:/d' $file -i
+done
+
+set  +e
+for file in $files; do
+	./scripts/checkpatch.pl --patch $file
+done
+set -e

@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -ex
+
+alias staging_gcloud='/google/data/ro/teams/cloud-sdk/gcloud'
+
+VM1=$1
+VM2=$2
+
+time cos-dev cos_kmake -k -C lakitu_defconfig
+
+cos-dev build_gpu $VM1 $VM2

@@ -1,0 +1,4 @@
+#!/bin/sh
+
+/google/bin/releases/kernel-tools/kolada/kolada > tags
+awk '{print $1}' tags | grep -i "$1" | paste -sd ' '

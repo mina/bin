@@ -1,0 +1,3 @@
+#!/bin/sh
+
+git range-diff $1~40..$1 $2~45..$2

@@ -1,0 +1,22 @@
+#!/bin/sh
+
+set -x
+
+alias staging_gcloud='/google/data/ro/teams/cloud-sdk/gcloud'
+
+VM1=$1
+VM2=$2
+
+cos-dev cos_kmake -k -C lakitu_defconfig || exit
+cos-dev deploy $VM1 cos-kernel-* || exit
+cos-dev deploy $VM2 cos-kernel-* || exit
+
+while ! cos-dev build_gpu $VM1 $VM2; do sleep 5; done
+
+while ! cos-dev deploy_gpu $VM1 $VM2; do sleep 5; done
+
+pushd ~/tcp-devmem-samples
+while ! ./scripts/copy-benchmark-cos $VM1 $VM2 2>&1 > /dev/null; do sleep 5; done
+popd
+
+while ! ./scripts/run-stable $VM1 $VM2; do sleep 5; done

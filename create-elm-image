@@ -1,0 +1,78 @@
+#!/bin/sh
+
+#
+# Workflow:
+# Prepare branch
+# ~/bin/create-elm-patches
+# gcloud compute images list | grep -i debian-10
+# ~/bin/create-elm-image <base img>
+
+set -ex
+
+instance="mina-deb-1"
+
+<<FUB
+set +e
+yes Y | gcloud compute instances delete $instance
+set -e
+a3-create-instance-debian -n $instance -i $1
+
+set +e
+while ! gcloud compute ssh $instance -- "echo booted"; do
+	sleep 5;
+done
+set -e
+FUB
+
+gcloud compute ssh $instance -- \
+	"cd /tcpx/src &&
+	rm -rf ./patches/*"
+
+gcloud compute scp --recurse ~/elm-patches/* "$instance:/tcpx/src/patches/"
+
+	# sudo make olddefconfig &&
+
+set +e
+gcloud compute ssh $instance -- \
+	"cd /tcpx/src/linux &&
+	sudo git reset --hard v5.15.120 &&
+	sudo git am /tcpx/src/patches/* &&
+	sudo rm -rf ../*deb* &&
+	sudo rm -rf ../*changes &&
+	sudo rm -rf ../*buildinfo &&
+	sudo make -j`nproc` bindeb-pkg LOCALVERSION=-tcpx &&
+	sudo dpkg -i ../*deb*"
+
+
+gcloud compute ssh $instance -- \
+	"sudo reboot"
+
+while ! gcloud compute ssh $instance -- "echo booted"; do
+	sleep 5;
+done
+set -e
+
+gcloud compute ssh $instance -- \
+	"cat /proc/version &&
+	cd /tcpx/src/open-gpu-kernel-modules/ &&
+	sudo make -j80 &&
+	sudo cp ./kernel-open/nvidia.ko /tcpx/ &&
+	sudo cp ./kernel-open/nvidia-uvm.ko /tcpx/ &&
+	cd /tcpx/ &&
+	sudo insmod ./nvidia.ko &&
+	sudo insmod ./nvidia-uvm.ko &&
+	nvidia-smi"
+
+gcloud compute ssh $instance -- \
+	"cd /tcpx/src/compute-virtual-ethernet-linux/ &&
+	sudo rm -r compute-virtual-ethernet-linux/google/gve &&
+	sudo cp -r linux/drivers/net/ethernet/google/gve/ compute-virtual-ethernet-linux/google/ &&
+	cd compute-virtual-ethernet-linux &&
+	sudo git checkout -- google/gve/gve_size_assert.h &&
+	sudo ./build_src.sh -d &&
+	sudo cp deb-1.0.1/gve-dkms_1.0.1_amd64.deb /tcpx/ &&
+	sudo dpkg -i /tcpx/gve-dkms_1.0.1_amd64.deb &&
+	sudo rm -rf /tcpx/src/linux/*gve* &&
+	sudo reboot"
+
+create-debian-img mina-deb-1

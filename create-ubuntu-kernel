@@ -1,0 +1,89 @@
+#!/bin/sh
+
+#
+# Workflow:
+# Prepare branch
+# gcloud compute images list | grep -i debian-10
+# ~/bin/create-elm-image <base img>
+
+set -ex
+
+instance="mina-dlvm-1"
+
+mkdir -p ~/ubuntu-patches/
+rm -rf ~/ubuntu-patches/*
+
+files=$(git format-patch linux-gcp/gcp-5.15-next -o ~/ubuntu-patches/)
+
+gcloud compute ssh $instance -- \
+	"sudo mkdir -p /tcpx/src/patches &&
+	sudo chmod 777 /tcpx &&
+	sudo chmod 777 /tcpx/src &&
+	sudo chmod 777 /tcpx/src/patches &&
+	cd /tcpx/src &&
+	sudo rm -rf ./patches/*"
+
+gcloud compute scp --recurse ~/ubuntu-patches/* "$instance:/tcpx/src/patches/"
+
+# git clone https://git.launchpad.net/~canonical-kernel-gcp-tcpx/ubuntu/+source/linux-gcp-tcpx/+git/focal
+# git clone git://git.launchpad.net/~canonical-kernel/ubuntu/+source/linux-gcp/+git/focal focal-minh
+
+set +e
+gcloud compute ssh $instance -- \
+	"sudo apt-get update;
+	sudo apt-get install git devscripts debhelper &&
+	sudo apt-get install python3-dev &&
+	sudo apt-get install build-essential makedumpfile libcap-dev \
+	libelf-dev libnewt-dev libiberty-dev default-jdk-headless java-common \
+	libdw-dev libpci-dev pkg-config flex bison libunwind8-dev liblzma-dev \
+	libssl-dev libaudit-dev bc libudev-dev uuid-dev libnuma-dev dkms zstd \
+	dwarves xmlto docbook-utils ghostscript fig2dev sharutils asciidoc \
+	python3-sphinx python3-sphinx-rtd-theme fontconfig python3-docutils \
+	imagemagick graphviz dvipng fonts-noto-cjk latexmk librsvg2-bin \
+	kernel-wedge"
+set -e
+
+gcloud compute ssh $instance -- \
+	"cd /tcpx/src/ &&
+	cd focal-minh &&
+	sudo git am --abort;
+	sudo git checkout remotes/origin/gcp-5.15-next &&
+	sudo git am /tcpx/src/patches/* &&
+	sudo rm -rf ../*deb* &&
+	sudo rm -rf ../*changes &&
+	sudo rm -rf ../*buildinfo &&
+	sudo fakeroot debian/rules clean &&
+	sudo debuild &&
+	sudo dpkg -i ../*deb*"
+
+
+set +e
+gcloud compute ssh $instance -- \
+	"sudo reboot"
+
+while ! gcloud compute ssh $instance -- "echo booted"; do
+	sleep 5;
+done
+set -e
+
+gcloud compute ssh $instance -- \
+	"cat /proc/version &&
+	cd /tcpx/src/open-gpu-kernel-modules/ &&
+	sudo make -j80 &&
+	sudo cp ./kernel-open/nvidia.ko /tcpx/ &&
+	sudo cp ./kernel-open/nvidia-uvm.ko /tcpx/ &&
+	cd /tcpx/ &&
+	sudo insmod ./nvidia.ko &&
+	sudo insmod ./nvidia-uvm.ko &&
+	nvidia-smi"
+
+gcloud compute ssh $instance -- \
+	"cd /tcpx/src/compute-virtual-ethernet-linux/ &&
+	sudo rm -r compute-virtual-ethernet-linux/google/gve &&
+	sudo cp -r linux/drivers/net/ethernet/google/gve/ compute-virtual-ethernet-linux/google/ &&
+	cd compute-virtual-ethernet-linux &&
+	sudo git checkout -- google/gve/gve_size_assert.h &&
+	sudo ./build_src.sh -d &&
+	sudo cp deb-1.0.1/gve-dkms_1.0.1_amd64.deb /tcpx/"
+
+create-debian-img mina-deb-1

@@ -1,0 +1,19 @@
+#!/bin/sh
+
+set -ex
+
+LDIRS="(dfn:net/ \
+	OR dfn:Documentation/networking \
+	OR dfn:drivers/net/ethernet/google \
+	OR dfn:tools/testing/selftests/net \
+	OR a:almasrymina@google.com)"
+
+LEXPR="(${LDIRS}) AND rt:3.days.ago.."
+lei q -I https://lore.kernel.org/all -o ~/mail --threads --dedupe=mid "${LEXPR}"
+mutt -f ~/mail
+
+
+
+# notmuch new
+# notmuch tag +tome -- tag:new AND to:almasrymina@google.com
+# vim -c ":NotMuch"

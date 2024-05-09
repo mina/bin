@@ -1,0 +1,19 @@
+#!/bin/sh
+
+#
+# Workflow:
+# ~/bin/clang-format-patches
+# ~/bin/checkpatches
+# ~/bin/test-build-patches
+# ~/bin/get-maintainers
+# ~/bin/send-patches -v $v.
+
+parent=$(git rev-parse --abbrev-ref --symbolic-full-name @{u})
+head=$(git rev-parse --abbrev-ref --symbolic-full-name HEAD)
+echo $parent
+
+git diff $parent | ./scripts/get_maintainer.pl --nogit-fallback \
+	--norolestats -nom > $head/TO.txt
+
+git diff $parent | ./scripts/get_maintainer.pl --nogit-fallback \
+	--norolestats -nol > $head/CC.txt

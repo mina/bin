@@ -1,0 +1,20 @@
+#!/bin/sh
+#
+# make allmodconfig # or whatever
+# test-build-patches
+
+set -ex
+
+rm -rf old-build.txt
+rm -rf new-build.txt
+
+parent=$1
+
+if [ -z "$parent" ]; then
+	parent=$(git rev-parse --abbrev-ref --symbolic-full-name @{u})
+fi
+
+make mrproper
+git rebase --exec '~/bin/build-patch-test' $parent~
+
+echo "Test build patches succeeded"

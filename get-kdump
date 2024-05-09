@@ -1,0 +1,21 @@
+#!/bin/sh
+
+set -ex
+
+VM=$1
+
+while ! gcloud compute ssh $VM -- \
+	"sudo rm -rf /var/tmp/sosreport* && \
+	sudo sos report --all-logs --batch && \
+	sudo chmod 777 /var/tmp/sosreport-*.tar.xz"; do
+	sleep 5;
+done
+
+dir="sosreport-$VM-$(date +%Y%m%d_%H%M%S)"
+
+mkdir -p ~/$dir
+pushd ~/$dir
+gcloud compute scp $VM:/var/tmp/sosreport-*.tar.xz .
+tar xf sosreport-*
+
+echo here
