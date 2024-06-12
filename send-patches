@@ -22,7 +22,7 @@ for file in $files; do
 	vim $file
 done
 
-git tag "$head-$(date +%F-%s)"
+git tag "$head-send-patches-$(date +%F-%s)"
 
 git send-email \
 	$files \

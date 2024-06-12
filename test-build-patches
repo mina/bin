@@ -14,7 +14,10 @@ if [ -z "$parent" ]; then
 	parent=$(git rev-parse --abbrev-ref --symbolic-full-name @{u})
 fi
 
-make mrproper
-git rebase --exec '~/bin/build-patch-test' $parent~
+make allmodconfig
+./scripts/config --file .config -d werror
+git rebase --exec \
+	'git show | grep -q "not-for-review\|only-internal-review" || sudo make -j80' \
+	$parent
 
 echo "Test build patches succeeded"
