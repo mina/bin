@@ -1,27 +1,18 @@
 #!/bin/bash
-# SPDX-License-Identifier: GPL-2.0
-#
-# Copyright (C) 2019 Netronome Systems, Inc.
 
-cc="gcc"
+cc="ccache gcc"
 output_dir=build_allmodconfig_warn/
 ncpu=$(grep -c processor /proc/cpuinfo)
-build_flags="-Oline -j $ncpu -s W=1 C=1"
+build_flags="-Oline -j $ncpu W=1 C=1"
 tmpfile_o=$(mktemp)
 tmpfile_n=$(mktemp)
 rc=0
-
-prep_config() {
-  make mrproper
-  KCONFIG_ALLCONFIG=../devmem.config make CC="$cc" O=$output_dir allnoconfig
-  ./scripts/config --file $output_dir/.config -d werror
-}
 
 echo "Using $build_flags redirect to $tmpfile_o and $tmpfile_n"
 echo "CC=$cc"
 $cc --version | head -n1
 
-BRANCH=$(git rev-parse --abbrev-ref --symbolic-full-name @{u})
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
 HEAD=$(git rev-parse $1)
 PARENT=$(git rev-parse --abbrev-ref --symbolic-full-name @{u})
 

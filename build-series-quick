@@ -1,0 +1,15 @@
+#!/bin/bash
+
+cc="ccache gcc"
+output_dir=build_allmodconfig_warn/
+
+prep_config() {
+  make CC="$cc" O=$output_dir mrproper
+  #make CC="$cc" O=$output_dir allmodconfig
+  KCONFIG_ALLCONFIG=../devmem.config make CC="$cc" O=$output_dir allnoconfig
+  ./scripts/config --file $output_dir/.config -d werror
+}
+
+source build-series-common
+
+git tag "$head-$(basename "$0")-$(date +%F-%s)"

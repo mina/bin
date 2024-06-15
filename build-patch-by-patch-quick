@@ -1,0 +1,23 @@
+#!/bin/sh
+#
+# make allmodconfig # or whatever
+# test-build-patches
+
+set -ex
+
+rm -rf tmpfile_o.txt
+rm -rf tmpfile_n.txt
+
+parent=$1
+
+if [ -z "$parent" ]; then
+	parent=$(git rev-parse --abbrev-ref --symbolic-full-name @{u})
+fi
+
+git rebase --exec \
+	'git show | grep -q "not-for-review\|only-internal-review" || ~/bin/build-checks-one-patch-quick' \
+	$parent~
+
+echo "Test build patches succeeded"
+
+git tag "$head-$(basename "$0")-$(date +%F-%s)"

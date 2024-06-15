@@ -5,8 +5,8 @@
 
 set -ex
 
-rm -rf old-build.txt
-rm -rf new-build.txt
+rm -rf tmpfile_o.txt
+rm -rf tmpfile_n.txt
 
 parent=$1
 
@@ -14,10 +14,10 @@ if [ -z "$parent" ]; then
 	parent=$(git rev-parse --abbrev-ref --symbolic-full-name @{u})
 fi
 
-make allmodconfig
-./scripts/config --file .config -d werror
 git rebase --exec \
-	'git show | grep -q "not-for-review\|only-internal-review" || sudo make -j80' \
-	$parent
+	'git show | grep -q "not-for-review\|only-internal-review" || ~/bin/build-checks-one-patch' \
+	$parent~
 
 echo "Test build patches succeeded"
+
+git tag "$head-$(basename "$0")-$(date +%F-%s)"

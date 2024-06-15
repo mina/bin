@@ -3,10 +3,14 @@
 #
 # Workflow:
 # ~/bin/clang-format-patches
-# ~/bin/checkpatches
-# ~/bin/test-build-patches
-# ~/bin/get-maintainers
-# ~/bin/send-patches -v $v.
+# RANGE="net-next/main..HEAD~22" ~/bin/checkpatch-patches -v 12
+#
+# ~/bin/build-series-quick HEAD~22
+# ~/bin/build-patch-by-patch-quick
+#
+# ~/bin/build-patch-by-patch
+#
+# RANGE="net-next/main..HEAD~22" ~/bin/send-patches -v 12
 
 set -ex
 
@@ -22,7 +26,7 @@ for file in $files; do
 	vim $file
 done
 
-git tag "$head-send-patches-$(date +%F-%s)"
+git tag "$head-$(basename "$0")-$(date +%F-%s)"
 
 git send-email \
 	$files \
