@@ -2,18 +2,24 @@
 
 set -ex
 
-LDIRS="(dfn:net/ \
-	OR dfn:Documentation/networking \
-	OR dfn:drivers/net/ethernet/google \
-	OR dfn:tools/testing/selftests/net \
-	OR a:almasrymina@google.com)"
+netdev_now() {
+        vim -c ":NotMuch"
+}
 
-LEXPR="(${LDIRS}) AND rt:3.days.ago.."
-lei q -I https://lore.kernel.org/all -o ~/mail --threads --dedupe=mid "${LEXPR}"
-mutt -f ~/mail
+netdev() {
+  # other
+  #LDIRS="dfn:/net/packet OR dfn:/net/core OR dfn:/net/ipv OR dfn:/net/sched OR dfn:/net/socket.c"
+  LDIRS="((dfn:/net/ AND NOT dfn:drivers/net/ethernet) OR dfn:Documentation/networking OR dfn:selftests/net OR a:almasrymina@google.com OR dfn:intel/idpf OR dfn:intel/libie OR dfn:google/gve)"
+  LEXPR="(${LDIRS}) AND rt:5.days.ago.."
+  lei q -a -I https://lore.kernel.org/netdev -o ~/mail --threads --dedupe=mid "${LEXPR}"
+  notmuch new
 
+  # text search
+  LEXPR="b:devmem AND rt:3.days.ago.."
+  lei q -a -I https://lore.kernel.org/netdev -o ~/mail --threads --dedupe=mid "${LEXPR}"
+  notmuch new
 
+  notmuch tag +tome -- tag:inbox AND to:almasrymina@google.com
 
-# notmuch new
-# notmuch tag +tome -- tag:new AND to:almasrymina@google.com
-# vim -c ":NotMuch"
+  netdev_now
+}

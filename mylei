@@ -1,0 +1,49 @@
+#!/bin/sh
+
+set +ex
+
+MAIL="/usr/local/google/home/almasrymina/netdev8"
+ME="/usr/local/google/home/almasrymina/netdev-me"
+
+vimnotmuch() {
+  notmuch new
+  vim -c ":NotMuch"
+}
+
+mylei() {
+  LDIRS="(\
+    dfn:Documentation/networking/ OR \
+    dfn:include/linux/skbuff.h OR \
+    dfn:include/linux/skbuff_ref.h OR \
+    dfn:include/net/ OR \
+    dfn:include/uapi/linux/netdev.h OR \
+    dfn:net/core/ OR \
+    dfn:net/ipv4/tcp.c OR \
+    dfn:net/ipv4/tcp_input.c OR \
+    dfn:net/ipv4/tcp_ipv4.c OR \
+    dfn:net/ipv4/tcp_output.c OR \
+    dfn:tools/include/uapi/linux/netdev.h OR \
+    dfn:tools/testing/selftests/net/ OR \
+    a:almasrymina@google.com OR \
+    dfn:intel/idpf OR \
+    dfn:intel/libie OR \
+    dfn:google/gve)"
+
+  LEXPR="(${LDIRS}) AND rt:20.days.ago.."
+
+  lei q -a -I https://lore.kernel.org/netdev -o $MAIL --threads --dedupe=mid "${LEXPR}"
+  mutt -f $MAIL
+  # vimnotmuch
+}
+
+netdev_me() {
+  LDIRS="(a:almasrymina@google.com)"
+
+  LEXPR="(${LDIRS}) AND rt:30.days.ago.."
+
+  lei q -a -I https://lore.kernel.org/netdev -o $ME --threads --dedupe=mid "${LEXPR}"
+  mutt -f $ME
+  # vimnotmuch
+}
+
+mylei
