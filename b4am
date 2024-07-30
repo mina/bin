@@ -1,0 +1,3 @@
+#!/bin/sh
+
+b4 am -o - $1 | git am
