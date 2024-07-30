@@ -10,6 +10,13 @@ prep_config() {
   ./scripts/config --file $output_dir/.config -d werror
 }
 
+if [ -z "$1" ]; then
+  echo argument not supplied
+  exit 1
+fi
+
 source build-series-common
+
+head=$(git rev-parse --abbrev-ref --symbolic-full-name HEAD)
 
 git tag "$head-$(basename "$0")-$(date +%F-%s)"
