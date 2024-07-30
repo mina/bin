@@ -9,14 +9,16 @@ rm -rf tmpfile_o.txt
 rm -rf tmpfile_n.txt
 
 parent=$1
+head=$(git rev-parse --abbrev-ref --symbolic-full-name HEAD)
 
 if [ -z "$parent" ]; then
 	parent=$(git rev-parse --abbrev-ref --symbolic-full-name @{u})
 fi
 
+make allmodconfig
 git rebase --exec \
-	'git show | grep -q "not-for-review\|only-internal-review" || ~/bin/build-checks-one-patch' \
-	$parent~
+	'git show | grep -q "not-for-review\|only-internal-review" || make -s -j80' \
+	$parent
 
 echo "Test build patches succeeded"
 
