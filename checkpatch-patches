@@ -25,14 +25,6 @@ for file in $files; do
 done
 set -e
 
-# open files for manual review
-for file in $files; do
-	if cat $file | grep -q "not-for-review\|only-internal-review"; then
-		continue;
-	fi
-	vim $file
-done
-
 # kernel-doc
 files=$(git diff "$RANGE" --name-only)
 echo kernel-doc...
@@ -40,27 +32,3 @@ for file in $files; do
 	./scripts/kernel-doc -none $file
 done
 echo done kernel-doc
-
-<<FUB
-# Extra checks I can't figure out to work yet.
-echo coccicheck...
-files=$(git diff "$RANGE" --name-only)
-o_files=()
-for file in $files; do
-	if [[ $file != *testing* ]]; then
-		if [[ $file == *.c ]]; then
-			o_file="${file%.c}.o"
-			o_files+=($o_file)
-		fi
-
-	fi
-done
-echo ${o_files[*]}
-
-sudo make -s -j80 C=2 ${o_files[*]}
-
-echo smatch...
-sudo ~/smatch/smatch_scripts/build_kernel_data.sh
-sudo ~/smatch/smatch_scripts/test_kernel.sh
-echo done smatch
-FUB

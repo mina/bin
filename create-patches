@@ -3,22 +3,6 @@
 set -ex
 
 
-function get_maintainers() {
-	set -ex
-
-	local range=$1
-
-	maintainersdir=".$range"
-	rm -rf "$maintainersdir"
-	mkdir -p "$maintainersdir"
-
-	git diff "$range" | ./scripts/get_maintainer.pl --nogit-fallback \
-		--norolestats -nom -nor --nomoderated > "$maintainersdir"/TO.txt
-
-	git diff "$range" | ./scripts/get_maintainer.pl --nogit-fallback \
-		--norolestats -nol --nomoderated > "$maintainersdir"/CC.txt
-	}
-
 function create_patches() {
 	set -ex
 
@@ -51,10 +35,11 @@ function create_patches() {
 	fi
 	echo RANGE="$RANGE"
 
-	get_maintainers $RANGE
+	to=$(git diff "$RANGE" | ./scripts/get_maintainer.pl --nogit-fallback \
+		--norolestats -nom -nor --nomoderated --nomultiline)
+	cc=$(git diff "$RANGE" | ./scripts/get_maintainer.pl --nogit-fallback \
+		--norolestats -nol --nomoderated --nomultiline)
 
-	to=$(cat "$maintainersdir"/TO.txt | tr \\n ', ')
-	cc=$(cat "$maintainersdir"/CC.txt | tr \\n ', ')
 	files=$(git format-patch \
 		-o $head \
 		"$RANGE" \
