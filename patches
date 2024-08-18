@@ -125,7 +125,7 @@ checkpatch_patches() {
 build_allmodconfig_patch_by_patch() {
 	make allmodconfig
 	git rebase --exec \
-		'git show | grep -q "not-for-review\|only-internal-review" || make -s -j80' \
+		'git show | grep -q "not-for-review" || make -s -j80' \
 		$parent
 
 	echo "Test build patches succeeded"
@@ -137,7 +137,7 @@ build_patch_by_patch() {
 	touch .first_in_series
 
 	git rebase --exec \
-		'git show | grep -q "not-for-review\|only-internal-review" || PATCHES_CONFIG=allnoconfig ~/bin/build_patch_with_checks.sh' \
+		'git show | grep -q "not-for-review" || PATCHES_CONFIG=allnoconfig ~/bin/build_patch_with_checks.sh' \
 		$parent
 
 	echo "Test build patches succeeded"
@@ -146,7 +146,7 @@ build_patch_by_patch() {
 
 clang_format() {
 	git rebase --exec \
-		'git show | grep -q "not-for-review\|only-internal-review" || git diff -U0 --no-color HEAD~ | /usr/lib/clang-format/clang-format-diff.py -i -p1' $1
+		'git show | grep -q "not-for-review" || git diff -U0 --no-color HEAD~ | /usr/lib/clang-format/clang-format-diff.py -i -p1' $1
 }
 
 command="$1"
