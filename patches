@@ -1,4 +1,33 @@
 #!/bin/sh
+#
+# Workflow:
+# git co -b my-branch --track net-next/main
+# vim ...
+# git a .
+# git cm -m "patch"
+#
+# # Creates patches under my-branch/
+# patches create_patches -v 1
+#
+# # Runs checkpatch
+# patches checkpatch_patches
+#
+# # Runs patch-by-patch W=1 C=1 in a git rebase --exec
+# patches build_patch_by_patch
+#	# if you run into errors
+#	vim ...				# fix the errors
+#	git cm --amend			# commit the fixes
+#	build_patch_with_checks.sh	# check if the errors still happen
+#	git rebase --continue		# Carry on with the patch-by-patch build
+#
+# # Build patch-by-patch allmodconfig in a git rebase --exec
+# patches build_allmodconfig_patch_by_patch
+#
+# # clang-format each patch in a git rebase --exec
+# patches clang_format
+#
+# # Send the patches upstream
+# patches send_patches
 
 set -euo pipefail
 # Turn on for debugging
@@ -66,7 +95,7 @@ send_patches() {
 	files=$(create_patches $@)
 
 	if [[ $TEST != 0 ]]; then
-		git_send_to="almasrymina@google.com"
+		git_send_to="$USER@google.com"
 	fi
 
 	yes | git send-email $files --to="$git_send_to" --cc-cover $CONFIRM
