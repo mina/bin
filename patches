@@ -62,24 +62,16 @@ function create_patches() {
 	echo $files
 }
 
-send_patches_no_confirm() {
+send_patches() {
 	files=$(create_patches $@)
 
 	if [[ $TEST != 0 ]]; then
 		git_send_to="almasrymina@google.com"
 	fi
 
-	yes | git send-email $files --to="$git_send_to" --cc-cover --confirm=never
+	yes | git send-email $files --to="$git_send_to" --cc-cover $CONFIRM
 
-	git tag "$head-$(basename "$0")-$(date +%F-%s)"
-}
-
-send_patches() {
-	files=$(create_patches $@)
-
-	git send-email $files --cc-cover --confirm=never
-
-	git tag "$head-$(basename "$0")-$(date +%F-%s)"
+	git tag "$head-send-patches-$(date +%F-%s)"
 }
 
 checkpatch_patches() {
@@ -136,7 +128,7 @@ if [ "$command" == "create_patches" ]; then
 elif [ "$command" == "send_patches" ]; then
 	send_patches $@
 elif [ "$command" == "send_patches_no_confirm" ]; then
-	send_patches_no_confirm $@
+	CONFIRM="--confirm=never" send_patches $@
 elif [ "$command" == "checkpatch_patches" ]; then
 	checkpatch_patches $@
 elif [ "$command" == "build_patch_by_patch" ]; then
