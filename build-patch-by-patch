@@ -15,8 +15,10 @@ if [ -z "$parent" ]; then
 	parent=$(git rev-parse --abbrev-ref --symbolic-full-name @{u})
 fi
 
+sudo git clean -fdx
+
 make allmodconfig
-git rebase --exec \
+git rebase -i --exec \
 	'git show | grep -q "not-for-review\|only-internal-review" || make -s -j80' \
 	$parent
 

@@ -11,7 +11,9 @@ rm -rf tmpfile_n.txt
 parent=$(git rev-parse --abbrev-ref --symbolic-full-name @{u})
 head=$(git rev-parse --abbrev-ref --symbolic-full-name HEAD)
 
-git rebase --exec \
+sudo git clean -fdx
+
+git rebase -i --exec \
 	'git show | grep -q "not-for-review\|only-internal-review" || ~/bin/build-checks-one-patch-quick' \
 	$parent
 
