@@ -4,7 +4,7 @@
 # git co -b my-branch --track net-next/main
 # vim ...
 # git a .
-# git cm -m "patch"
+# git cm -m "my patch"
 #
 # # Creates patches under my-branch/
 # patches create_patches -v 1
@@ -27,7 +27,7 @@
 # patches clang_format
 #
 # # Send the patches upstream
-# patches send_patches
+# patches send_patches -v 1
 
 set -euo pipefail
 # Turn on for debugging
