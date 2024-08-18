@@ -101,6 +101,28 @@ checkpatch_patches() {
 	echo done kernel-doc
 }
 
+build_allmodconfig_patch_by_patch() {
+	make allmodconfig
+	git rebase --exec \
+		'git show | grep -q "not-for-review\|only-internal-review" || make -s -j80' \
+		$parent
+
+	echo "Test build patches succeeded"
+
+	git tag "$head-build-allmodconfig-patch-by-patch-$(date +%F-%s)"
+}
+
+build_patch_by_patch() {
+	touch .first_in_series
+
+	git rebase --exec \
+		'git show | grep -q "not-for-review\|only-internal-review" || PATCHES_CONFIG=allnoconfig ~/bin/build_patch_with_checks.sh' \
+		$parent
+
+	echo "Test build patches succeeded"
+	git tag "$head-patch-by-patch-$(date +%F-%s)"
+}
+
 command="$1"
 shift
 
@@ -112,4 +134,8 @@ elif [ "$command" == "send_patches_no_confirm" ]; then
 	send_patches_no_confirm $@
 elif [ "$command" == "checkpatch_patches" ]; then
 	checkpatch_patches $@
+elif [ "$command" == "build_patch_by_patch" ]; then
+	build_patch_by_patch $@
+elif [ "$command" == "build_allmodconfig_patch_by_patch" ]; then
+	build_allmodconfig_patch_by_patch $@
 fi
