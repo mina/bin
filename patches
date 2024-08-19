@@ -105,19 +105,32 @@ send() {
 
 checkpatch() {
 	files=$(create $@)
+	tmpfile=$(mktemp)
 
 	# checkpatch
 	for file in $files; do
 		set +e
-		./scripts/checkpatch.pl --patch $file --codespell
+		./scripts/checkpatch.pl --patch $file --codespell | tee $tmpfile
+		errors=$(grep -c "ERROR" $tmpfile)
 		set -e
+		if [ $errors -gt 0 ]; then
+			exit $errors
+		fi
 	done
+
+	rm -rf $tmpfile
+
+	tmpfile=$(mktemp)
 
 	# kernel-doc
 	files=$(git diff "$RANGE" --name-only)
 	echo kernel-doc...
 	for file in $files; do
-		./scripts/kernel-doc -none $file
+		./scripts/kernel-doc -none $file 2>&1 | tee $tmpfile
+		errors=$(grep -i -c "\(warn\|error\)" $tmpfile)
+		if [ $errors -gt 0 ]; then
+			exit $errors
+		fi
 	done
 	echo done kernel-doc
 }
@@ -162,10 +175,13 @@ build_configs() {
 }
 
 presubmit() {
+	checkpatch
+
 	rc=$(build_configs)
 	if [[ $rc != 0 ]]; then
 		exit $rc
 	fi
+
 	build_allmodconfig_patch_by_patch
 }
 
