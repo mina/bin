@@ -27,7 +27,7 @@
 # patches clang_format
 #
 # # Send the patches upstream
-# patches send -v 1
+# patches presubmit && patches send -v 1
 
 set -euo pipefail
 # Turn on for debugging
@@ -149,6 +149,23 @@ clang_format() {
 		'git show | grep -q "not-for-review" || git diff -U0 --no-color HEAD~ | /usr/lib/clang-format/clang-format-diff.py -i -p1' $1
 }
 
+build_configs() {
+	rc=0
+	for config in $(ls ../*.config); do
+		KCONFIG_ALLCONFIG="$config" make allnoconfig -s
+		make -j96 -s || rc=$?
+	done
+	echo $rc
+}
+
+presubmit() {
+	rc=$(build_configs)
+	if [[ $rc != 0 ]]; then
+		exit $rc
+	fi
+	build_allmodconfig_patch_by_patch
+}
+
 command="$1"
 shift
 
@@ -164,6 +181,11 @@ elif [ "$command" == "build_patch_by_patch" ]; then
 	build_patch_by_patch $@
 elif [ "$command" == "build_allmodconfig_patch_by_patch" ]; then
 	build_allmodconfig_patch_by_patch $@
+elif [ "$command" == "presubmit" ]; then
+	presubmit $@
 elif [ "$command" == "clang_format" ]; then
 	clang_format $@
+elif [ "$command" == "build_configs" ]; then
+	rc=$(build_configs $@)
+	exit $rc
 fi
