@@ -155,6 +155,9 @@ build_configs() {
 		KCONFIG_ALLCONFIG="$config" make allnoconfig -s
 		make -j96 -s || rc=$?
 	done
+
+	make allnoconfig -s
+	make -j96 -s || rc=$?
 	echo $rc
 }
 
