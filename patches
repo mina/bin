@@ -9,6 +9,9 @@
 # # Creates patches under my-branch/
 # patches create -v 1
 #
+# # clang-format each patch in a git rebase --exec
+# patches clang_format
+#
 # # Runs checkpatch
 # patches checkpatch
 #
@@ -23,10 +26,7 @@
 # # Build patch-by-patch allmodconfig in a git rebase --exec
 # patches build_allmodconfig_patch_by_patch
 #
-# # clang-format each patch in a git rebase --exec
-# patches clang_format
-#
-# # Send the patches upstream
+# # Run all the checks, and send the patches upstream
 # patches presubmit && patches send -v 1
 
 set -euo pipefail
@@ -43,7 +43,7 @@ git_send_to="netdev@vger.kernel.org"
 echoerr() { cat <<< "$@" 1>&2; }
 
 function create() {
-	rm -rf $head
+	rm -rf $head/*.patch
 
 	cover_letter=""
 	set +e
@@ -100,7 +100,7 @@ send() {
 
 	yes | git send-email $files --to="$git_send_to" --cc-cover --8bit-encoding=UTF-8 $CONFIRM
 
-	git tag "$head-send-patches-$(date +%F-%s)"
+	git tag "$head-$FUNCNAME-$(date +%F-%s)"
 }
 
 checkpatch() {
@@ -109,6 +109,9 @@ checkpatch() {
 
 	# checkpatch
 	for file in $files; do
+		if grep "not-for-review" $file; then
+			exit 1
+		fi
 		set +e
 		./scripts/checkpatch.pl --patch $file --codespell | tee $tmpfile
 		errors=$(grep -c "ERROR" $tmpfile)
@@ -127,7 +130,9 @@ checkpatch() {
 	echo kernel-doc...
 	for file in $files; do
 		./scripts/kernel-doc -none $file 2>&1 | tee $tmpfile
+		set +e
 		errors=$(grep -i -c "\(warn\|error\)" $tmpfile)
+		set -e
 		if [ $errors -gt 0 ]; then
 			exit $errors
 		fi
@@ -143,10 +148,11 @@ build_allmodconfig_patch_by_patch() {
 
 	echo "Test build patches succeeded"
 
-	git tag "$head-build-allmodconfig-patch-by-patch-$(date +%F-%s)"
+	git tag "$head-$FUNCNAME-$(date +%F-%s)"
 }
 
 build_patch_by_patch() {
+	git clean -fdx
 	touch .first_in_series
 
 	git rebase --exec \
@@ -154,23 +160,25 @@ build_patch_by_patch() {
 		$parent
 
 	echo "Test build patches succeeded"
-	git tag "$head-patch-by-patch-$(date +%F-%s)"
+	git tag "$head-$FUNCNAME-$(date +%F-%s)"
 }
 
 clang_format() {
 	git rebase --exec \
-		'git show | grep -q "not-for-review" || git diff -U0 --no-color HEAD~ | /usr/lib/clang-format/clang-format-diff.py -i -p1' $1
+		'git show | grep -q "not-for-review" || git diff -U0 --no-color HEAD~ | /usr/lib/clang-format/clang-format-diff.py -i -p1' $parent
 }
 
 build_configs() {
 	rc=0
-	for config in $(ls ../*.config); do
+	for config in $(ls ../$head/*.config); do
 		KCONFIG_ALLCONFIG="$config" make allnoconfig -s
 		make -j96 -s || rc=$?
 	done
 
 	make allnoconfig -s
 	make -j96 -s || rc=$?
+
+	git tag "$head-$FUNCNAME-$(date +%F-%s)"
 	echo $rc
 }
 
@@ -181,6 +189,8 @@ presubmit() {
 	if [[ $rc != 0 ]]; then
 		exit $rc
 	fi
+
+	build_patch_by_patch
 
 	build_allmodconfig_patch_by_patch
 }
