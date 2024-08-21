@@ -143,7 +143,7 @@ checkpatch() {
 build_allmodconfig_patch_by_patch() {
 	make allmodconfig
 	git rebase --exec \
-		'git show | grep -q "not-for-review" || make -s -j80' \
+		'git show | grep -q "not-for-review" || make -s -j`nproc`' \
 		$parent
 
 	echo "Test build patches succeeded"
@@ -172,11 +172,11 @@ build_configs() {
 	rc=0
 	for config in $(ls ../$head/*.config); do
 		KCONFIG_ALLCONFIG="$config" make allnoconfig -s
-		make -j96 -s || rc=$?
+		make -j`nproc` -s || rc=$?
 	done
 
 	make allnoconfig -s
-	make -j96 -s || rc=$?
+	make -j`nproc` -s || rc=$?
 
 	git tag "$head-$FUNCNAME-$(date +%F-%s)"
 	echo $rc
