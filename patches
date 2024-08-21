@@ -94,6 +94,10 @@ function create() {
 send() {
 	files=$(create $@)
 
+	if [ ! -z $CONFIRM ]; then
+		presubmit
+	fi
+
 	if [[ $TEST != 0 ]]; then
 		git_send_to="$USER@google.com"
 	fi
