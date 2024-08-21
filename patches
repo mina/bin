@@ -69,11 +69,6 @@ function create() {
 	cc=$(git diff "$RANGE" | ./scripts/get_maintainer.pl --nogit-fallback \
 		--norolestats -nol --nomoderated --nomultiline)
 
-	if [[ $TEST != 0 ]]; then
-		to=""
-		cc=""
-	fi
-
 	files=$(git format-patch \
 		-o $head \
 		"$RANGE" \
@@ -93,16 +88,19 @@ function create() {
 
 send() {
 	files=$(create $@)
+	CONFIRM=${CONFIRM:-}
+
+	if [[ $TEST == 0 ]]; then
+		DRY_RUN=""
+	else
+		DRY_RUN="--dry-run"
+	fi
 
 	if [ ! -z $CONFIRM ]; then
 		presubmit
 	fi
 
-	if [[ $TEST != 0 ]]; then
-		git_send_to="$USER@google.com"
-	fi
-
-	yes | git send-email $files --to="$git_send_to" --cc-cover --8bit-encoding=UTF-8 $CONFIRM
+	yes | git send-email $files --to="$git_send_to" --cc-cover --8bit-encoding=UTF-8 $CONFIRM $DRY_RUN
 
 	git tag "$head-$FUNCNAME-$(date +%F-%s)"
 }
