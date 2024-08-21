@@ -183,6 +183,10 @@ build_configs() {
 }
 
 presubmit() {
+	git fetch net-next
+
+	git rebase
+
 	checkpatch
 
 	rc=$(build_configs)
