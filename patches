@@ -45,7 +45,7 @@ echoerr() { cat <<< "$@" 1>&2; }
 function create() {
 	rm -rf $head/*.patch
 
-	cover_letter=""
+	local cover_letter=""
 	set +e
 	git config branch.$head.description > .description.txt && \
 		cover_letter="1"
@@ -64,12 +64,14 @@ function create() {
 		cover_letter=""
 	fi
 
-	to=$(git diff "$RANGE" | ./scripts/get_maintainer.pl --nogit-fallback \
-		--norolestats -nom -nor --nomoderated --nomultiline)
-	cc=$(git diff "$RANGE" | ./scripts/get_maintainer.pl --nogit-fallback \
-		--norolestats -nol --nomoderated --nomultiline)
+	local to=$(git diff "$RANGE" | ./scripts/get_maintainer.pl \
+		--nogit-fallback --norolestats -nom -nor --nomoderated \
+		--nomultiline)
+	local cc=$(git diff "$RANGE" | ./scripts/get_maintainer.pl \
+		--nogit-fallback --norolestats -nol --nomoderated --nomultiline)
 
-	files=$(git format-patch \
+	# TODO, this assumes net-next
+	local files=$(git format-patch \
 		-o $head \
 		"$RANGE" \
 		$cover_letter \
@@ -87,7 +89,7 @@ function create() {
 }
 
 send() {
-	files=$(create $@)
+	local files=$(create $@)
 	CONFIRM=${CONFIRM:-}
 
 	if [[ $TEST == 0 ]]; then
@@ -100,14 +102,14 @@ send() {
 		presubmit
 	fi
 
-	yes | git send-email $files --to="$git_send_to" --cc-cover --8bit-encoding=UTF-8 $CONFIRM $DRY_RUN
+	yes | git send-email $files --to="$git_send_to" --cc-cover --8bit-encoding=UTF-8 $CONFIRM $DRY_RUN || true
 
 	git tag "$head-$FUNCNAME-$(date +%F-%s)"
 }
 
 checkpatch() {
-	files=$(create $@)
-	tmpfile=$(mktemp)
+	local files=$(create $@)
+	local tmpfile=$(mktemp)
 
 	# checkpatch
 	for file in $files; do
@@ -125,12 +127,12 @@ checkpatch() {
 
 	rm -rf $tmpfile
 
-	tmpfile=$(mktemp)
+	local tmpfile=$(mktemp)
 
 	# kernel-doc
-	files=$(git diff "$RANGE" --name-only)
+	local touched=$(git diff "$RANGE" --name-only)
 	echo kernel-doc...
-	for file in $files; do
+	for file in $touched; do
 		./scripts/kernel-doc -none $file 2>&1 | tee $tmpfile
 		set +e
 		errors=$(grep -i -c "\(warn\|error\)" $tmpfile)
@@ -143,9 +145,10 @@ checkpatch() {
 }
 
 build_allmodconfig_patch_by_patch() {
-	make allmodconfig
+	local dir=build_allmodconfig/
+	make allmodconfig O=$dir
 	git rebase --exec \
-		'git show | grep -q "not-for-review" || make -s -j`nproc`' \
+		"git show | grep -q \"not-for-review\" || make -s -j`nproc` O=$dir" \
 		$parent
 
 	echo "Test build patches succeeded"
@@ -171,27 +174,30 @@ clang_format() {
 }
 
 build_configs() {
-	rc=0
+	local rc=0
+	local dir=allnoconfig/
 	for config in $(ls ../$head/*.config); do
-		KCONFIG_ALLCONFIG="$config" make allnoconfig -s
-		make -j`nproc` -s || rc=$?
+		KCONFIG_ALLCONFIG="$config" make allnoconfig -s O=$dir
+		make -j`nproc` -s O=$dir || rc=$?
 	done
 
-	make allnoconfig -s
-	make -j`nproc` -s || rc=$?
+	make allnoconfig -s O=$dir
+	make -j`nproc` -s O=$dir || rc=$?
 
 	git tag "$head-$FUNCNAME-$(date +%F-%s)"
 	echo $rc
 }
 
 presubmit() {
-	git fetch net-next
+	sudo git clean -fdx
+
+	git fetch net-next # TODO, this assumes net-next
 
 	git rebase
 
 	checkpatch
 
-	rc=$(build_configs)
+	local rc=$(build_configs)
 	if [[ $rc != 0 ]]; then
 		exit $rc
 	fi
@@ -199,6 +205,12 @@ presubmit() {
 	build_patch_by_patch
 
 	build_allmodconfig_patch_by_patch
+}
+
+send_no_confirm() {
+	presubmit
+
+	CONFIRM="--confirm=never" send $@
 }
 
 command="$1"
@@ -209,7 +221,7 @@ if [ "$command" == "create" ]; then
 elif [ "$command" == "send" ]; then
 	send $@
 elif [ "$command" == "send_no_confirm" ]; then
-	CONFIRM="--confirm=never" send $@
+	send_no_confirm $@
 elif [ "$command" == "checkpatch" ]; then
 	checkpatch $@
 elif [ "$command" == "build_patch_by_patch" ]; then
@@ -221,6 +233,6 @@ elif [ "$command" == "presubmit" ]; then
 elif [ "$command" == "clang_format" ]; then
 	clang_format $@
 elif [ "$command" == "build_configs" ]; then
-	rc=$(build_configs $@)
+	local rc=$(build_configs $@)
 	exit $rc
 fi
